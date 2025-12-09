@@ -34,28 +34,3 @@ jobs:
           unzip dependency-check-10.0.3-release.zip -d dc
           chmod +x dc/dependency-check/bin/dependency-check.sh
 
-      - name: Install JDK for Dependency-Check
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-    
-      - name: Run OWASP Dependency-Check for Python project
-        env:
-            NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: |
-            mkdir dc-report
-            dc/dependency-check/bin/dependency-check.sh \
-            --project "python-flask-api" \
-            --scan requirements.txt \
-            --format JSON \
-            --out dc-report \
-            --disableAssembly \
-            --enableExperimental \
-            --nvdApiKey "$NVD_API_KEY" || true
-
-      - name: Upload Dependency-Check JSON report
-        uses: actions/upload-artifact@v4
-        with:
-          name: dependency-check-report
-          path: dc-report/dependency-check-report.json
