@@ -14,8 +14,9 @@ load_dotenv()
 
 DATABASE = os.getenv("DATABASE")
 JWT_SECRET = os.getenv("JWT_SECRET")
-JWT_ALGORITHM = "HS256"
 JWT_EXP_SECONDS = int(os.getenv("JWT_EXP_SECONDS"))
+JWT_ALGORITHM = "HS256"
+
 
 
 # -------------------------
@@ -59,7 +60,7 @@ def init_db():
 def create_token(user_id: int) -> str:
     now = datetime.now(timezone.utc)
     payload = {
-        "sub": user_id,
+        "sub": str(user_id),
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(seconds=JWT_EXP_SECONDS)).timestamp()),
     }
@@ -69,6 +70,7 @@ def create_token(user_id: int) -> str:
 
 def decode_token(token: str):
     try:
+        app.logger.info(f"Get token: {token}")
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
@@ -95,16 +97,15 @@ def jwt_required(f):
     def decorated(*args, **kwargs):
         token = get_auth_token_from_header()
         if not token:
-            return jsonify({"error": "Authorization header required"}), 401
+            return jsonify({"error": "authorization header required"}), 401
         payload = decode_token(token)
         if "error" in payload:
-            if payload["error"] == "token_expired":
-                return jsonify({"error": "token expired"}), 401
-            return jsonify({"error": "invalid token"}), 401
-        g.current_user_id = {"id": payload["sub"]}
+            return jsonify(payload), 401
+        g.current_user = {"id": payload["sub"]}
         return f(*args, **kwargs)
 
     return decorated
+
 
 
 # -------------------------
@@ -152,34 +153,44 @@ def login_or_register():
     return jsonify({"token": token, "user": {"id": user_id, "username": username}}), 200
 
 
+@app.route("/api/data", methods=["GET"])
+@jwt_required
+def get_all_users():
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT id, username FROM users ORDER BY id")
+    rows = cur.fetchall()
+    users = [{"id": r["id"], "username": r["username"]} for r in rows]
+    return jsonify({"users": users}), 200
+
+
+@app.route("/auth/user", methods=["DELETE"])
+@jwt_required
+def delete_user():
+    current_user = g.get("current_user")
+    if not current_user:
+        return jsonify({"error": "unauthorized"}), 401
+
+    user_id = current_user["id"]
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    db.commit()
+    if cur.rowcount == 0:
+        return jsonify({"error": "user not found"}), 404
+    return jsonify({"message": f"user {user_id} deleted"}), 200
+
 
 @app.route('/')
 def index():
     return "Hello!"
 
-@app.route('/greet/<name>')
-def greet(name):
-    return f'Hello {name}!'
-
-@app.route('/add/<int:n1>/<int:n2>')
-def add(n1, n2):
-    return f'{n1} + {n2} = {n1 + n2}!'
-
-@app.route('/params', methods=['GET', 'POST'])
-def params():
-    if (request.method == 'GET'):
-        return str(request.args)
-    return 'POST!'
 
 
-@app.route('/auth/login', methods=['POST'])
-def login():
-    username = request.json['username']
-    return f'POST: {username}?!'
-
-
+# -------------------------
+# Start
+# -------------------------
 if __name__ == '__main__':
     with app.app_context():
         init_db()
     app.run(host='0.0.0.0', debug=True)
-
