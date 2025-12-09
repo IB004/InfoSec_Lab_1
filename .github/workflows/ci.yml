@@ -27,3 +27,27 @@ jobs:
         with:
           name: bandit-report
           path: bandit-report.json
+
+      - name: Download OWASP Dependency-Check
+        run: |
+          wget https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.3/dependency-check-10.0.3-release.zip
+          unzip dependency-check-10.0.3-release.zip -d dc
+          chmod +x dc/dependency-check/bin/dependency-check.sh
+
+      - name: Run OWASP Dependency-Check (SCA)
+        run: |
+          mkdir dc-report
+          dc/dependency-check/bin/dependency-check.sh \
+            --project "python-flask-api" \
+            --scan requirements.txt \
+            --format JSON \
+            --out dc-report \
+            --disableAssembly \
+            --enableExperimental || true
+
+      - name: Upload Dependency-Check JSON report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: dc-report/dependency-check-report.json
+          
