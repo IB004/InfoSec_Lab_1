@@ -17,6 +17,8 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_EXP_SECONDS = int(os.getenv("JWT_EXP_SECONDS"))
 JWT_ALGORITHM = "HS256"
 
+FLASK_HOST = os.getenv("FLASK_HOST")
+FLASK_DEBUG = os.getenv("FLASK_DEBUG").lower() == "true"
 
 
 # -------------------------
@@ -193,4 +195,4 @@ def index():
 if __name__ == '__main__':
     with app.app_context():
         init_db()
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host=FLASK_HOST, debug=FLASK_DEBUG)
