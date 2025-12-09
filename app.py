@@ -8,6 +8,7 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
+
 app = Flask(__name__)
 
 load_dotenv()
@@ -122,6 +123,9 @@ def login_or_register():
 
     if not username or not password:
         return jsonify({"error": "username and password required"}), 400
+    
+    if (not username.isalnum()) or len(username) > 32:
+        return jsonify({"error": "invalid username format"}), 400
 
     db = get_db()
     cur = db.cursor()

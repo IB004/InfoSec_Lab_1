@@ -3,7 +3,7 @@ name: CI - SAST & SCA
 on: [push, pull_request]
 
 jobs:
-  lint-and-security:
+  sast-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
