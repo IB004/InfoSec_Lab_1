@@ -1,0 +1,9 @@
+services:
+  web:
+    image: "sec-lab-1:latest"
+    build: .
+    container_name: "web"
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
